@@ -41,7 +41,6 @@ class Vercodescreen extends StatelessWidget {
             ),
             SizedBox(height: screenheight * 0.02),
 
-            // Gradient Button
             SizedBox(
               width: screenwidth * 0.8,
               height: screenheight * 0.06,
@@ -49,7 +48,9 @@ class Vercodescreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => BottomBarScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => BottomBarNavigation(),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(

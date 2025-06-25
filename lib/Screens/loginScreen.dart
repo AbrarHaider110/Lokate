@@ -67,7 +67,7 @@ class _LoginscreenState extends State<Loginscreen>
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => BottomBarScreen()),
+          MaterialPageRoute(builder: (context) => BottomBarNavigation()),
         );
       } else {
         String errorMessage = 'Login failed';
@@ -113,7 +113,7 @@ class _LoginscreenState extends State<Loginscreen>
                   duration: const Duration(seconds: 1),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/SplashScreenlogo.jpg',
+                      'assets/authimg.jpg',
                       width: 120,
                       height: 120,
                       fit: BoxFit.cover,

@@ -118,7 +118,7 @@ class _SignupscreenState extends State<Signupscreen>
                 duration: const Duration(seconds: 1),
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/SplashScreenlogo.jpg',
+                    'assets/authimg.jpg',
                     width: 120,
                     height: 120,
                     fit: BoxFit.cover,

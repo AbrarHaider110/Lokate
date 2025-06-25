@@ -1,50 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 
-class BottomBarScreen extends StatefulWidget {
+class BottomBarNavigation extends StatefulWidget {
   @override
-  _BottomBarScreenState createState() => _BottomBarScreenState();
+  _BottomBarNavigationState createState() => _BottomBarNavigationState();
 }
 
-class _BottomBarScreenState extends State<BottomBarScreen> {
-  int _bottomNavIndex = 0;
-
-  final List<IconData> iconList = [
-    Icons.home,
-    Icons.search,
-    Icons.notifications,
-    Icons.account_circle,
-  ];
+class _BottomBarNavigationState extends State<BottomBarNavigation> {
+  int _currentIndex = 0;
 
   final List<Widget> _screens = [
     Center(child: Text('Home Screen')),
-    Center(child: Text('Search Screen')),
-    Center(child: Text('Notifications Screen')),
+    Center(child: Text('Favorites Screen')),
+    Center(child: Text('Add Action')),
+    Center(child: Text('Settings Screen')),
     Center(child: Text('Profile Screen')),
   ];
+
+  final Color selectedColor = Color(0xFF1A9C8C);
+  final List<Color> gradientColors = [Color(0xFF1A9C8C), Color(0xFF0233A4)];
+
+  void _onTabSelected(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: _screens[_bottomNavIndex],
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Color(0xFFFCA403),
-        child: Icon(Icons.add),
-        onPressed: () {},
+      backgroundColor: Colors.grey[100],
+      body: _screens[_currentIndex],
+      bottomNavigationBar: Container(
+        height: 65,
+        margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildNavIcon(Icons.home, 0),
+            _buildNavIcon(Icons.favorite, 1),
+            _buildAlwaysFilledAddIcon(2),
+            _buildNavIcon(Icons.settings, 3),
+            _buildNavIcon(Icons.person, 4),
+          ],
+        ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: AnimatedBottomNavigationBar(
-        icons: iconList,
-        activeIndex: _bottomNavIndex,
-        gapLocation: GapLocation.center,
-        notchSmoothness: NotchSmoothness.verySmoothEdge,
-        leftCornerRadius: 32,
-        rightCornerRadius: 32,
-        backgroundColor: Color(0xFF383A37),
-        activeColor: Color(0xFFFCA403),
-        inactiveColor: Colors.white,
-        onTap: (index) => setState(() => _bottomNavIndex = index),
+    );
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => _onTabSelected(index),
+      child: Icon(
+        icon,
+        color: isSelected ? selectedColor : Colors.grey,
+        size: 28,
+      ),
+    );
+  }
+
+  Widget _buildAlwaysFilledAddIcon(int index) {
+    return GestureDetector(
+      onTap: () => _onTabSelected(index),
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradientColors),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Icon(Icons.add, color: Colors.white, size: 28),
+        ),
       ),
     );
   }

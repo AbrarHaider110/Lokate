@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:my_app/Screens/Splashscreen.dart';
-import 'package:my_app/Screens/verification_code_screen.dart';
 import 'package:my_app/provider/password_provider.dart';
 import 'package:provider/provider.dart';
 
-// 👇 Bypass SSL certificate validation (Development ONLY)
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
