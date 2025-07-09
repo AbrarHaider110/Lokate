@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/Screens/create_post_screen.dart';
 import 'package:my_app/Screens/profile.dart';
 
 class BottomBarNavigation extends StatefulWidget {
@@ -12,7 +13,7 @@ class _BottomBarNavigationState extends State<BottomBarNavigation> {
   final List<Widget> _screens = [
     Center(child: Text('Home Screen')),
     Center(child: Text('Favorites Screen')),
-    Center(child: Text('Add Action')),
+    CreatePostScreen(),
     Center(child: Text('Settings Screen')),
     ProfileScreen(),
   ];
