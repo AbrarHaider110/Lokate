@@ -1,12 +1,84 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:my_app/Screens/Otp_Ver_screen.dart';
 
-class ForgetPasswordScreen extends StatelessWidget {
+class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});
 
   @override
+  State<ForgetPasswordScreen> createState() => _ForgetPasswordScreenState();
+}
+
+class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  bool isLoading = false;
+
+  Future<void> handleForgetPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your email.')));
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final uri = Uri.parse(
+        'https://lokate.bsite.net/api/user/ForgetPasswordRequest',
+      ).replace(queryParameters: {'email': email});
+
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      setState(() => isLoading = false);
+
+      if (response.statusCode == 200) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const OtpVerScreen()),
+        );
+      } else if (response.statusCode == 404) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This email is not registered yet.')),
+        );
+      } else {
+        final errorMsg = _extractErrorMessage(response.body);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Request failed: $e')));
+    }
+  }
+
+  String _extractErrorMessage(String responseBody) {
+    try {
+      final Map<String, dynamic> body = json.decode(responseBody);
+      if (body.containsKey('errors')) {
+        final errors = body['errors'] as Map<String, dynamic>;
+        return errors.entries
+            .map((entry) => '${entry.key}: ${(entry.value as List).join(", ")}')
+            .join('\n');
+      }
+      return body['title'] ?? 'An unknown error occurred.';
+    } catch (_) {
+      return 'An unknown error occurred.';
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    // final screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -22,69 +94,74 @@ class ForgetPasswordScreen extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Forget your Password?",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Forget your Password?",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Enter your email address and we'll send you an OTP to reset your password.",
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Enter your Email Address',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Text("Enter your email address and we will send"),
-                        const Text("you instructions to reset your password"),
-                        const SizedBox(height: 32),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Enter your Email Address',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(10),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              stops: [0.001, 1.0],
+                              colors: [
+                                Color(0xFF1A9C8C),
+                                Color.fromARGB(255, 2, 51, 164),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                          ),
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : handleForgetPassword,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
+                            child:
+                                isLoading
+                                    ? const CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    )
+                                    : const Text(
+                                      "Request OTP",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                stops: [0.001, 1.0],
-                                colors: [
-                                  Color(0xFF1A9C8C),
-                                  Color.fromARGB(255, 2, 51, 164),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(16),
-                              ),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Text(
-                                "Request reset link",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

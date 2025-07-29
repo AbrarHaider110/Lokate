@@ -42,7 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void handleChange() {
-    // Implement your change logic here
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Change button pressed')));

@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/Screens/Bottom_bar_navigation.dart';
-import 'package:video_player/video_player.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -22,7 +21,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   File? selectedImage;
   File? selectedVideo;
   File? selectedFile;
-  VideoPlayerController? _videoController;
 
   @override
   void initState() {
@@ -37,7 +35,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void dispose() {
     _controller.dispose();
-    _videoController?.dispose();
     super.dispose();
   }
 
@@ -90,8 +87,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     setState(() {
                       selectedImage = File(pickedFile.path);
                       selectedVideo = null;
-                      _videoController?.dispose();
-                      _videoController = null;
                     });
                   }
                   Navigator.pop(context);
@@ -105,15 +100,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     source: ImageSource.camera,
                   );
                   if (pickedVideo != null) {
-                    File videoFile = File(pickedVideo.path);
-                    _videoController?.dispose();
-                    _videoController = VideoPlayerController.file(videoFile)
-                      ..initialize().then((_) {
-                        setState(() {
-                          selectedVideo = videoFile;
-                          selectedImage = null;
-                        });
-                      });
+                    setState(() {
+                      selectedVideo = File(pickedVideo.path);
+                      selectedImage = null;
+                    });
                   }
                   Navigator.pop(context);
                 },
@@ -131,20 +121,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     if (path.endsWith('.mp4') ||
                         path.endsWith('.mov') ||
                         path.endsWith('.avi')) {
-                      _videoController?.dispose();
-                      _videoController = VideoPlayerController.file(picked)
-                        ..initialize().then((_) {
-                          setState(() {
-                            selectedVideo = picked;
-                            selectedImage = null;
-                          });
-                        });
+                      setState(() {
+                        selectedVideo = picked;
+                        selectedImage = null;
+                      });
                     } else {
                       setState(() {
                         selectedImage = picked;
                         selectedVideo = null;
-                        _videoController?.dispose();
-                        _videoController = null;
                       });
                     }
                   }
@@ -343,40 +327,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             child: Image.file(selectedImage!),
                           ),
                         ],
-                        if (selectedVideo != null &&
-                            _videoController != null &&
-                            _videoController!.value.isInitialized) ...[
+                        if (selectedVideo != null) ...[
                           const SizedBox(height: 16),
-                          AspectRatio(
-                            aspectRatio: _videoController!.value.aspectRatio,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                VideoPlayer(_videoController!),
-                                IconButton(
-                                  icon: Icon(
-                                    _videoController!.value.isPlaying
-                                        ? Icons.pause
-                                        : Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 40,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _videoController!.value.isPlaying
-                                          ? _videoController!.pause()
-                                          : _videoController!.play();
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Video: ${selectedVideo!.path.split('/').last}",
-                            style: const TextStyle(fontSize: 14),
-                          ),
+                          const Text("Video selected"),
                         ],
                         if (selectedFile != null) ...[
                           const SizedBox(height: 16),
