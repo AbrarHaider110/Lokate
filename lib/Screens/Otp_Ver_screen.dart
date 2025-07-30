@@ -14,6 +14,7 @@ class OtpVerScreen extends StatefulWidget {
 class _OtpVerScreenState extends State<OtpVerScreen> {
   final TextEditingController otpController = TextEditingController();
   bool isLoading = false;
+  int? userId;
 
   Future<void> verifyOtp() async {
     final String otpCode = otpController.text.trim();
@@ -25,15 +26,22 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
       return;
     }
 
+    if (userId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('User ID not found')));
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
 
     try {
       final response = await http.post(
-        Uri.parse('https://lokate.bsite.net/api/user/vro'),
+        Uri.parse('https://lokate.bsite.net/api/user/VerifyPin'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({"otp": otpCode}),
+        body: json.encode({"userId": userId, "pin": otpCode}),
       );
 
       final data = json.decode(response.body);
@@ -44,9 +52,11 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
           MaterialPageRoute(builder: (context) => BottomBarNavigation()),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? 'Invalid OTP.')),
-        );
+        final errorMessage =
+            data['message'] ?? data['error'] ?? 'Verification failed';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,6 +66,15 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    if (args != null && args.containsKey('userId')) {
+      userId = args['userId'];
     }
   }
 
@@ -76,15 +95,14 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Center(
-                  child: const Text(
-                    "Enter Verification Code",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
+                const Text(
+                  "Enter Verification Code",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
-                const Text("We have sent you a four digit OTP"),
-                Center(child: const Text("on your email address")),
+                const Text(
+                  "We have sent a 4-digit OTP to your registered contact",
+                ),
                 const SizedBox(height: 35),
                 PinCodeTextField(
                   appContext: context,

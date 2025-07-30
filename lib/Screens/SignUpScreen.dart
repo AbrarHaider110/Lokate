@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_app/Screens/Bottom_bar_navigation.dart';
 import 'package:provider/provider.dart';
 import 'package:my_app/Screens/Loginscreen.dart';
 import 'package:my_app/Screens/verification_code_screen.dart';
@@ -75,7 +76,7 @@ class _SignupscreenState extends State<Signupscreen>
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Vercodescreen()),
+          MaterialPageRoute(builder: (context) => BottomBarNavigation()),
         );
       } else {
         String errorMessage = 'Registration failed';
