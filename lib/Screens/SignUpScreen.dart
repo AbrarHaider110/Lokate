@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_app/Screens/Bottom_bar_navigation.dart';
-import 'package:provider/provider.dart';
 import 'package:my_app/Screens/Loginscreen.dart';
 import 'package:my_app/Screens/verification_code_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:my_app/provider/password_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Signupscreen extends StatefulWidget {
   const Signupscreen({super.key});
@@ -43,7 +43,11 @@ class _SignupscreenState extends State<Signupscreen>
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    if ([fullName, userName, contact, email, password].any((e) => e.isEmpty)) {
+    if (fullName.isEmpty ||
+        userName.isEmpty ||
+        contact.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
@@ -66,35 +70,61 @@ class _SignupscreenState extends State<Signupscreen>
         }),
       );
 
-      setState(() => isLoading = false);
+      final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration successful! Please verify your email.'),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => BottomBarNavigation()),
-        );
-      } else {
-        String errorMessage = 'Registration failed';
-        if (response.body.isNotEmpty) {
-          try {
-            final error = jsonDecode(response.body);
-            errorMessage = error['message'] ?? errorMessage;
-          } catch (_) {}
+        final userId = responseData['userId']?.toString();
+
+        if (userId != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_id', userId);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Registration successful! Please verify your email.',
+              ),
+            ),
+          );
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => VerifyCodeScreen(userId: int.parse(userId)),
+              ),
+            );
+          }
+        } else {
+          throw Exception('User ID not received from server');
         }
+      } else {
+        final errorMessage = _parseErrorMessage(response.body);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
-      setState(() => isLoading = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  String _parseErrorMessage(String responseBody) {
+    try {
+      if (responseBody.isEmpty) return 'Registration failed';
+      final error = jsonDecode(responseBody);
+      return error['message']?.toString() ??
+          error['title']?.toString() ??
+          'Registration failed';
+    } catch (e) {
+      return 'Registration failed: ${responseBody.substring(0, responseBody.length > 100 ? 100 : responseBody.length)}';
     }
   }
 

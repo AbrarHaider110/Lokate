@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/Otp_Ver_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});
@@ -13,6 +14,20 @@ class ForgetPasswordScreen extends StatefulWidget {
 class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool isLoading = false;
+  int? userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = int.tryParse(prefs.getString('user_id') ?? '');
+    });
+  }
 
   Future<void> handleForgetPassword() async {
     final email = _emailController.text.trim();
@@ -21,6 +36,15 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter your email.')));
+      return;
+    }
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User ID not found. Please sign in again.'),
+        ),
+      );
       return;
     }
 
@@ -36,12 +60,12 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
         headers: {'Content-Type': 'application/json'},
       );
 
-      setState(() => isLoading = false);
-
       if (response.statusCode == 200) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const OtpVerScreen()),
+          MaterialPageRoute(
+            builder: (context) => OtpVerScreen(userId: userId!),
+          ),
         );
       } else if (response.statusCode == 404) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -54,10 +78,11 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
         ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
       }
     } catch (e) {
-      setState(() => isLoading = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Request failed: $e')));
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -125,18 +150,17 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              stops: [0.001, 1.0],
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
                               colors: [
                                 Color(0xFF1A9C8C),
                                 Color.fromARGB(255, 2, 51, 164),
                               ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: ElevatedButton(
                             onPressed: isLoading ? null : handleForgetPassword,
@@ -146,6 +170,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
+                              padding: EdgeInsets.zero,
                             ),
                             child:
                                 isLoading
