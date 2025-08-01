@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -17,8 +18,6 @@ class VerifyCodeScreen extends StatefulWidget {
 class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
   late final TextEditingController _pinController;
   bool isLoading = false;
-  int remainingAttempts = 3;
-  bool showAttemptsWarning = false;
 
   @override
   void initState() {
@@ -26,66 +25,58 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     _pinController = TextEditingController();
   }
 
-  Future<void> verifyAccount() async {
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> verifyPin() async {
     final pin = _pinController.text.trim();
 
-    if (pin.isEmpty || pin.length != 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid 4-digit PIN")),
-      );
+    if (pin.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) {
+      _showSnackBar('Invalid PIN format (must be 4 digits)', isError: true);
       return;
     }
 
-    setState(() {
-      isLoading = true;
-      showAttemptsWarning = false;
-    });
+    setState(() => isLoading = true);
 
     try {
-      final response = await http
-          .post(
-            Uri.parse('https://lokate.bsite.net/api/user/VerifyAccount'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'userId': widget.userId, 'enteredCode': pin}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final uri = Uri.parse(
+        'https://lokate.bsite.net/api/user/VerifyAccount?userId=${widget.userId}&pin=$pin',
+      );
 
-      final jsonResponse = jsonDecode(response.body);
+      final response = await http.post(
+        uri,
+        headers: {'Accept': 'application/json'},
+      );
 
-      if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_verified', true);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(jsonResponse['message'] ?? 'Verification successful'),
-          ),
-        );
+        _showSnackBar(data['message'] ?? 'Account verified!');
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => BottomBarNavigation()),
         );
       } else {
-        setState(() {
-          remainingAttempts--;
-          showAttemptsWarning = true;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(jsonResponse['message'] ?? 'Verification failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        final pinError = data['errors']?['pin']?[0];
+        final message = pinError ?? data['message'] ?? 'Verification failed';
+        _showSnackBar(message, isError: true);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('An error occurred: $e', isError: true);
     } finally {
       setState(() => isLoading = false);
     }
@@ -121,16 +112,6 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                if (showAttemptsWarning && remainingAttempts > 0)
-                  Text(
-                    '$remainingAttempts attempts remaining',
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                const SizedBox(height: 10),
-
                 PinCodeTextField(
                   appContext: context,
                   length: 4,
@@ -154,10 +135,11 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                   enableActiveFill: true,
-                  onChanged: (value) {},
-                  beforeTextPaste: (text) {
-                    return text?.length == 4 && int.tryParse(text!) != null;
-                  },
+                  onChanged: (_) {},
+                  onCompleted: (_) => verifyPin(),
+                  beforeTextPaste:
+                      (text) =>
+                          text != null && RegExp(r'^\d{4}$').hasMatch(text),
                 ),
                 const SizedBox(height: 30),
 
@@ -165,10 +147,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed:
-                        isLoading || remainingAttempts <= 0
-                            ? null
-                            : verifyAccount,
+                    onPressed: isLoading ? null : verifyPin,
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
@@ -195,11 +174,9 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                                   color: Colors.white,
                                   strokeWidth: 2,
                                 )
-                                : Text(
-                                  remainingAttempts <= 0
-                                      ? 'No Attempts Left'
-                                      : 'Verify Account',
-                                  style: const TextStyle(
+                                : const Text(
+                                  'Verify Account',
+                                  style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,

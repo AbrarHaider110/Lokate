@@ -28,49 +28,49 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
     );
   }
 
-  Future<void> verifyAccount() async {
-    final String pin = _pinController.text.trim();
+  Future<void> verifyPin() async {
+    final pin = _pinController.text.trim();
 
-    if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
+    if (pin.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) {
       _showErrorSnackBar('Invalid PIN format (must be 4 digits)');
       return;
     }
+    print('Verifying PIN: $pin for userId: ${widget.userId}');
+    print('Attempting to verify userId: ${widget.userId} with pin: $pin');
+    print(
+      'URL: https://lokate.bsite.net/api/user/VerifyPin?userId=${widget.userId}&pin=$pin',
+    );
 
     setState(() => isLoading = true);
 
     try {
-      final response = await http
-          .post(
-            Uri.parse('https://lokate.bsite.net/api/user/VerifyPin'),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({'userId': widget.userId, 'pin': pin}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final uri = Uri.parse(
+        'https://lokate.bsite.net/api/user/VerifyPin?userId=${widget.userId}&pin=$pin',
+      );
 
-      final responseData = json.decode(response.body);
+      final response = await http.post(
+        uri,
+        headers: {'Accept': 'application/json'},
+      );
 
-      if (response.statusCode == 200) {
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => BottomBarNavigation()),
-            (route) => false,
-          );
-        }
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => BottomBarNavigation()),
+        );
       } else {
-        final errorMsg = responseData['message'] ?? 'Verification failed';
-        _showErrorSnackBar(errorMsg);
+        final message = data['message'] ?? 'Verification failed';
+        _showErrorSnackBar(message);
       }
-    } on TimeoutException {
-      _showErrorSnackBar('Request timed out. Please try again.');
-    } on http.ClientException catch (e) {
-      _showErrorSnackBar('Network error: ${e.message}');
-    } on FormatException {
-      _showErrorSnackBar('Invalid server response');
     } catch (e) {
-      _showErrorSnackBar('An unexpected error occurred');
+      _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      setState(() => isLoading = false);
     }
   }
 
@@ -103,7 +103,6 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
                   style: TextStyle(color: Colors.black54, fontSize: 16),
                 ),
                 const SizedBox(height: 30),
-
                 PinCodeTextField(
                   appContext: context,
                   length: 4,
@@ -122,18 +121,17 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
                     inactiveColor: Colors.grey,
                   ),
                   onChanged: (value) {},
-                  onCompleted: (pin) => verifyAccount(),
+                  onCompleted: (pin) => verifyPin(),
                   beforeTextPaste:
                       (text) =>
                           text?.length == 4 && int.tryParse(text!) != null,
                 ),
                 const SizedBox(height: 30),
-
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: isLoading ? null : verifyAccount,
+                    onPressed: isLoading ? null : verifyPin,
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
