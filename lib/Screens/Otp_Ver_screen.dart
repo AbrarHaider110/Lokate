@@ -3,7 +3,6 @@ import 'package:my_app/Screens/Reset_password.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpVerScreen extends StatefulWidget {
@@ -16,14 +15,14 @@ class OtpVerScreen extends StatefulWidget {
 }
 
 class _OtpVerScreenState extends State<OtpVerScreen> {
-  final TextEditingController _pinController = TextEditingController();
+  late final TextEditingController _pinController;
   bool isLoading = false;
-  int? userId;
   double _logoOpacity = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _pinController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _logoOpacity = 1.0;
@@ -31,25 +30,27 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
     });
   }
 
-  void _showErrorSnackBar(String message) {
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: isError ? Colors.red : Colors.green,
         duration: const Duration(seconds: 3),
       ),
     );
   }
 
   Future<void> verifyPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('user_id') ?? '');
-    });
     final pin = _pinController.text.trim();
 
     if (pin.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) {
-      _showErrorSnackBar('Invalid PIN format (must be 4 digits)');
+      _showSnackBar('Invalid PIN format (must be 4 digits)', isError: true);
       return;
     }
 
@@ -68,18 +69,31 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_verified', true);
+
+        if (!mounted) return;
+        _showSnackBar(data['message'] ?? 'Pin Verified successfully!');
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => ResetPassword(userId: userId!)),
+          MaterialPageRoute(
+            builder: (_) => ResetPassword(userId: widget.userId),
+          ),
         );
       } else {
         final message = data['message'] ?? 'Verification failed';
-        _showErrorSnackBar(message);
+        _showSnackBar(message, isError: true);
       }
     } catch (e) {
-      _showErrorSnackBar('An error occurred. Please try again.');
+      _showSnackBar('An error occurred. Please try again.', isError: true);
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 

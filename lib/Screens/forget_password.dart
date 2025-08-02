@@ -48,6 +48,23 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
     setState(() => isLoading = true);
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedUserId = prefs.getString('user_id');
+
+      if (storedUserId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User not found. Please sign up first.'),
+          ),
+        );
+        return;
+      }
+
+      final userId = int.tryParse(storedUserId);
+      if (userId == null) {
+        throw Exception('Invalid User ID format in local storage');
+      }
+
       final uri = Uri.parse(
         'https://lokate.bsite.net/api/user/ForgetPasswordRequest',
       ).replace(queryParameters: {'email': email});
@@ -57,43 +74,26 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
         headers: {'Content-Type': 'application/json'},
       );
 
-      final responseBody = response.body;
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: $responseBody');
-
       if (response.statusCode == 200) {
-        final data = json.decode(responseBody);
-        final success = data['success'] == true;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('OTP sent to your email')));
 
-        if (success) {
-          if (userId == null) {
-            throw Exception('User ID not found locally');
-          }
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OtpVerScreen(userId: userId!),
-            ),
-          );
-        } else {
-          final message = data['message'] ?? 'Unknown error';
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(message)));
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => OtpVerScreen(userId: userId)),
+        );
       } else if (response.statusCode == 404) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('This email is not registered yet.')),
         );
       } else {
-        final errorMsg = _extractErrorMessage(responseBody);
+        final errorMsg = _extractErrorMessage(response.body);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
       }
     } catch (e) {
-      debugPrint('ForgetPassword error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Request failed: ${e.toString()}')),
       );

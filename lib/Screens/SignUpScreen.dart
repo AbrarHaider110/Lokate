@@ -72,32 +72,25 @@ class _SignupscreenState extends State<Signupscreen>
 
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        final userId = responseData['userId']?.toString();
+      if (response.statusCode == 200 && responseData['userId'] != null) {
+        final userId = responseData['userId'].toString();
 
-        if (userId != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_id', userId);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', userId);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Registration successful! Please verify your email.',
-              ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Please verify your email.'),
+          ),
+        );
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerifyCodeScreen(userId: int.parse(userId)),
             ),
           );
-
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => VerifyCodeScreen(userId: int.parse(userId)),
-              ),
-            );
-          }
-        } else {
-          throw Exception('User ID not received from server');
         }
       } else {
         final errorMessage = _parseErrorMessage(response.body);
@@ -110,9 +103,7 @@ class _SignupscreenState extends State<Signupscreen>
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
