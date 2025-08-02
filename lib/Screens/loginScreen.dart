@@ -134,7 +134,6 @@ class _LoginscreenState extends State<Loginscreen>
                         const Text(
                           "Hi, Welcome back! You have been missed",
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.black54),
                         ),
                         const SizedBox(height: 30),
                         TextField(

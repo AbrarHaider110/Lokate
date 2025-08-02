@@ -45,15 +45,6 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       return;
     }
 
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User ID not found. Please sign in again.'),
-        ),
-      );
-      return;
-    }
-
     setState(() => isLoading = true);
 
     try {
@@ -66,27 +57,46 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
         headers: {'Content-Type': 'application/json'},
       );
 
+      final responseBody = response.body;
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: $responseBody');
+
       if (response.statusCode == 200) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OtpVerScreen(userId: userId!),
-          ),
-        );
+        final data = json.decode(responseBody);
+        final success = data['success'] == true;
+
+        if (success) {
+          if (userId == null) {
+            throw Exception('User ID not found locally');
+          }
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OtpVerScreen(userId: userId!),
+            ),
+          );
+        } else {
+          final message = data['message'] ?? 'Unknown error';
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        }
       } else if (response.statusCode == 404) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('This email is not registered yet.')),
         );
       } else {
-        final errorMsg = _extractErrorMessage(response.body);
+        final errorMsg = _extractErrorMessage(responseBody);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Request failed: $e')));
+      debugPrint('ForgetPassword error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Request failed: ${e.toString()}')),
+      );
     } finally {
       setState(() => isLoading = false);
     }
@@ -94,7 +104,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
 
   String _extractErrorMessage(String responseBody) {
     try {
-      final Map<String, dynamic> body = json.decode(responseBody);
+      final body = json.decode(responseBody);
       if (body.containsKey('errors')) {
         final errors = body['errors'] as Map<String, dynamic>;
         return errors.entries
