@@ -18,11 +18,15 @@ class VerifyCodeScreen extends StatefulWidget {
 class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
   late final TextEditingController _pinController;
   bool isLoading = false;
+  double _logoOpacity = 0.0;
 
   @override
   void initState() {
     super.initState();
     _pinController = TextEditingController();
+    setState(() {
+      _logoOpacity = 1.0;
+    });
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -100,6 +104,18 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                AnimatedOpacity(
+                  opacity: _logoOpacity,
+                  duration: const Duration(seconds: 1),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/authimg.jpg',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
                 const Text(
                   "Verify Your Account",
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),

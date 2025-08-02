@@ -15,11 +15,17 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool isLoading = false;
   int? userId;
+  double _logoOpacity = 0.0;
 
   @override
   void initState() {
     super.initState();
     _loadUserId();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _logoOpacity = 1.0;
+      });
+    });
   }
 
   Future<void> _loadUserId() async {
@@ -107,92 +113,104 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal:
-                    screenWidth > 600 ? screenWidth * 0.2 : screenWidth * 0.1,
-                vertical: 20,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Forget your Password?",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal:
+                  screenWidth > 600 ? screenWidth * 0.2 : screenWidth * 0.1,
+              vertical: 20,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedOpacity(
+                      opacity: _logoOpacity,
+                      duration: const Duration(seconds: 1),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/authimg.jpg',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Enter your email address and we'll send you an OTP to reset your password.",
-                        textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Forget your Password?",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 32),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Enter your Email Address',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Enter your email address and we'll send you an OTP to reset your password.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Enter your Email Address',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF1A9C8C),
-                                Color.fromARGB(255, 2, 51, 164),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF1A9C8C),
+                              Color.fromARGB(255, 2, 51, 164),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : handleForgetPassword,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: EdgeInsets.zero,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : handleForgetPassword,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child:
-                                isLoading
-                                    ? const CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Request OTP",
-                                      style: TextStyle(color: Colors.white),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child:
+                              isLoading
+                                  ? const CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
                                     ),
-                          ),
+                                  )
+                                  : const Text(
+                                    "Request OTP",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/Screens/Bottom_bar_navigation.dart';
+import 'package:my_app/Screens/Reset_password.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpVerScreen extends StatefulWidget {
   final int userId;
@@ -17,6 +18,18 @@ class OtpVerScreen extends StatefulWidget {
 class _OtpVerScreenState extends State<OtpVerScreen> {
   final TextEditingController _pinController = TextEditingController();
   bool isLoading = false;
+  int? userId;
+  double _logoOpacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _logoOpacity = 1.0;
+      });
+    });
+  }
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -29,17 +42,16 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
   }
 
   Future<void> verifyPin() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = int.tryParse(prefs.getString('user_id') ?? '');
+    });
     final pin = _pinController.text.trim();
 
     if (pin.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) {
       _showErrorSnackBar('Invalid PIN format (must be 4 digits)');
       return;
     }
-    print('Verifying PIN: $pin for userId: ${widget.userId}');
-    print('Attempting to verify userId: ${widget.userId} with pin: $pin');
-    print(
-      'URL: https://lokate.bsite.net/api/user/VerifyPin?userId=${widget.userId}&pin=$pin',
-    );
 
     setState(() => isLoading = true);
 
@@ -53,15 +65,12 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
         headers: {'Accept': 'application/json'},
       );
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => BottomBarNavigation()),
+          MaterialPageRoute(builder: (_) => ResetPassword(userId: userId!)),
         );
       } else {
         final message = data['message'] ?? 'Verification failed';
@@ -92,6 +101,19 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                AnimatedOpacity(
+                  opacity: _logoOpacity,
+                  duration: const Duration(seconds: 1),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/authimg.jpg',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 const Text(
                   "Verify Your Account",
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
