@@ -48,6 +48,7 @@ dependencies:
   video_player: ^2.7.0
   pin_code_fields: ^8.0.1
   shared_preferences: ^2.5.3
+  flutter_launcher_icons: ^0.14.4
 
 
 dev_dependencies:
@@ -104,3 +105,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/authimg.jpg"
