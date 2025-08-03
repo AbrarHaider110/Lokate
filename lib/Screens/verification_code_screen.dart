@@ -66,10 +66,6 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
         await prefs.setBool('is_verified', true);
 
         _showSnackBar(data['message'] ?? 'Account verified!');
-
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (!mounted) return;
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => BottomBarNavigation()),
