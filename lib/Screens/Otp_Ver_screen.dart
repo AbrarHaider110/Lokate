@@ -73,7 +73,7 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
         await prefs.setBool('is_verified', true);
 
         if (!mounted) return;
-        _showSnackBar(data['message'] ?? 'PIN verified successfully!');
+        _showSnackBar(data['message'] ?? 'Pin Verified successfully!');
 
         await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
@@ -85,9 +85,7 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
           ),
         );
       } else {
-        // Handle server-provided error message
-        final message =
-            data['message'] ?? data['error'] ?? 'Invalid or expired PIN';
+        final message = data['message'] ?? 'Verification failed';
         _showSnackBar(message, isError: true);
       }
     } catch (e) {

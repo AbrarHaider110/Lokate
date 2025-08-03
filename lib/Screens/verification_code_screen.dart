@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_app/Screens/congrates_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:my_app/Screens/Bottom_bar_navigation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VerifyCodeScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     );
   }
 
-  Future<void> verifyPin() async {
+  Future<void> verifyAccount() async {
     final pin = _pinController.text.trim();
 
     if (pin.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) {
@@ -47,6 +47,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       return;
     }
 
+    if (!mounted) return;
     setState(() => isLoading = true);
 
     try {
@@ -61,14 +62,17 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
 
       final data = jsonDecode(response.body);
 
+      print('Response: ${response.body}');
+      print('Status: ${response.statusCode}');
+
       if (response.statusCode == 200 && data['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_verified', true);
 
-        _showSnackBar(data['message'] ?? 'Account verified!');
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => BottomBarNavigation()),
+          MaterialPageRoute(builder: (_) => const CongratesScreen()),
         );
       } else {
         final pinError = data['errors']?['pin']?[0];
@@ -78,7 +82,9 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     } catch (e) {
       _showSnackBar('An error occurred: $e', isError: true);
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -148,7 +154,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                   ),
                   enableActiveFill: true,
                   onChanged: (_) {},
-                  onCompleted: (_) => verifyPin(),
+                  onCompleted: (_) => verifyAccount(),
                   beforeTextPaste:
                       (text) =>
                           text != null && RegExp(r'^\d{4}$').hasMatch(text),
@@ -159,7 +165,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: isLoading ? null : verifyPin,
+                    onPressed: isLoading ? null : verifyAccount,
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
