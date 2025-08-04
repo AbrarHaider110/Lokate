@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_app/Screens/Bottom_bar_navigation.dart';
 import 'package:my_app/Screens/loginScreen.dart';
 
 class ResetPassword extends StatefulWidget {

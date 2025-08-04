@@ -47,7 +47,6 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       return;
     }
 
-    if (!mounted) return;
     setState(() => isLoading = true);
 
     try {
@@ -62,25 +61,20 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
 
       final data = jsonDecode(response.body);
 
-      print('Response: ${response.body}');
-      print('Status: ${response.statusCode}');
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('is_verified', true);
-
-        if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Password changed successfully")),
+        );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const CongratesScreen()),
+          MaterialPageRoute(builder: (context) => CongratesScreen()),
         );
       } else {
-        final pinError = data['errors']?['pin']?[0];
-        final message = pinError ?? data['message'] ?? 'Verification failed';
+        final message = data['message'] ?? 'Verification failed';
         _showSnackBar(message, isError: true);
       }
     } catch (e) {
-      _showSnackBar('An error occurred: $e', isError: true);
+      _showSnackBar('An error occurred. Please try again.', isError: true);
     } finally {
       if (mounted) {
         setState(() => isLoading = false);

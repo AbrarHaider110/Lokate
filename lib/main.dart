@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:my_app/Screens/Splashscreen.dart';
-import 'package:my_app/Screens/congrates_screen.dart';
 import 'package:my_app/provider/password_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -32,6 +31,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home: CongratesScreen());
+    return MaterialApp(home: Splashscreen());
   }
 }
