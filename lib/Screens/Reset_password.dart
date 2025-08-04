@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/Bottom_bar_navigation.dart';
+import 'package:my_app/Screens/loginScreen.dart';
 
 class ResetPassword extends StatefulWidget {
   final int userId;
@@ -17,6 +18,8 @@ class _ResetPasswordState extends State<ResetPassword> {
       TextEditingController();
   bool isLoading = false;
   double _logoOpacity = 0.0;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
@@ -50,11 +53,9 @@ class _ResetPasswordState extends State<ResetPassword> {
 
     try {
       int userId = widget.userId;
-
       final Uri url = Uri.parse(
         'https://lokate.bsite.net/api/user/ResetPassword?userId=$userId&newPassword=$newPassword',
       );
-
       final response = await http.post(url);
 
       if (response.statusCode == 200) {
@@ -63,7 +64,7 @@ class _ResetPasswordState extends State<ResetPassword> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => BottomBarNavigation()),
+          MaterialPageRoute(builder: (context) => Loginscreen()),
         );
       } else {
         ScaffoldMessenger.of(
@@ -110,7 +111,7 @@ class _ResetPasswordState extends State<ResetPassword> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _newPasswordController,
-                    obscureText: true,
+                    obscureText: _obscureNewPassword,
                     decoration: InputDecoration(
                       hintText: "Enter New Password",
                       hintStyle: const TextStyle(color: Colors.black54),
@@ -124,12 +125,27 @@ class _ResetPasswordState extends State<ResetPassword> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureNewPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureNewPassword = !_obscureNewPassword;
+                          });
+                        },
+                      ),
                     ),
+                    style: const TextStyle(color: Colors.black87),
+                    cursorColor: Colors.black87,
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _confirmPasswordController,
-                    obscureText: true,
+                    obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
                       hintText: "Confirm New Password",
                       hintStyle: const TextStyle(color: Colors.black54),
@@ -143,7 +159,22 @@ class _ResetPasswordState extends State<ResetPassword> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
                     ),
+                    style: const TextStyle(color: Colors.black87),
+                    cursorColor: Colors.black87,
                   ),
                   const SizedBox(height: 30),
                   SizedBox(
