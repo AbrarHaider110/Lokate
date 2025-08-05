@@ -48,23 +48,6 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
     setState(() => isLoading = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedUserId = prefs.getString('user_id');
-
-      if (storedUserId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User not found. Please sign up first.'),
-          ),
-        );
-        return;
-      }
-
-      final userId = int.tryParse(storedUserId);
-      if (userId == null) {
-        throw Exception('Invalid User ID format in local storage');
-      }
-
       final uri = Uri.parse(
         'https://lokate.bsite.net/api/user/ForgetPasswordRequest',
       ).replace(queryParameters: {'email': email});
@@ -75,6 +58,10 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       );
 
       if (response.statusCode == 200) {
+        // Extract user ID from the response if available (optional)
+        final responseData = jsonDecode(response.body);
+        final userId = responseData['userId']; // Adjust key if different
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('OTP sent to your email')));

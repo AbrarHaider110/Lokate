@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/congrates_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class VerifyCodeScreen extends StatefulWidget {
   final int userId;
@@ -62,9 +61,6 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Password changed successfully")),
-        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => CongratesScreen()),
