@@ -1,23 +1,73 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int userId;
+
+  const ProfileScreen({super.key, required this.userId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final TextEditingController fullNameController = TextEditingController();
-  final TextEditingController userNameController = TextEditingController();
-  final TextEditingController contactController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  late TextEditingController fullNameController;
+  late TextEditingController userNameController;
+  late TextEditingController contactController;
+  late TextEditingController emailController;
+  late TextEditingController passwordController;
 
-  bool isLoading = false;
+  bool isLoading = true;
+  bool isEditing = false;
+  bool isUpdating = false;
   File? profileImage;
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    fullNameController = TextEditingController();
+    userNameController = TextEditingController();
+    contactController = TextEditingController();
+    emailController = TextEditingController();
+    passwordController = TextEditingController();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://your-api.com/GetUserProfile?userId=${widget.userId}',
+        ),
+        headers: {'Authorization': 'Bearer YOUR_ACCESS_TOKEN'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          userData = data;
+          fullNameController.text = data['fullName'] ?? '';
+          userNameController.text = data['userName'] ?? '';
+          contactController.text = data['contact'] ?? '';
+          emailController.text = data['email'] ?? '';
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load user data');
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    }
+  }
 
   @override
   void dispose() {
@@ -29,22 +79,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void handleSignUp() {
-    setState(() {
-      isLoading = true;
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
+  Future<void> updateProfile() async {
+    if (!isEditing) {
       setState(() {
-        isLoading = false;
+        isEditing = true;
       });
-    });
-  }
+      return;
+    }
 
-  void handleChange() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Change button pressed')));
+    setState(() {
+      isUpdating = true;
+    });
+
+    try {
+      final updateData = {
+        'UserId': widget.userId,
+        'FullName': fullNameController.text.trim(),
+        'UserName': userNameController.text.trim(),
+        'Contact': contactController.text.trim(),
+      };
+
+      const url = 'https://your-api.com/UpdateProfile';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+        },
+        body: jsonEncode(updateData),
+      );
+
+      if (response.statusCode == 200) {
+        await _fetchUserData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+        setState(() {
+          isEditing = false;
+        });
+      } else {
+        throw Exception('Update failed');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      setState(() {
+        isUpdating = false;
+      });
+    }
   }
 
   Future<void> pickImage(ImageSource source) async {
@@ -55,9 +139,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         profileImage = File(pickedFile.path);
       });
+      _uploadProfileImage();
     }
-
     Navigator.pop(context);
+  }
+
+  Future<void> _uploadProfileImage() async {
+    if (profileImage == null) return;
+
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://your-api.com/UploadProfileImage'),
+      );
+      request.headers['Authorization'] = 'Bearer YOUR_ACCESS_TOKEN';
+      request.fields['userId'] = widget.userId.toString();
+      request.files.add(
+        await http.MultipartFile.fromPath('image', profileImage!.path),
+      );
+
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        await _fetchUserData();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload image: ${e.toString()}')),
+      );
+    }
   }
 
   void showImageSourceActionSheet() {
@@ -87,6 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
     required TextEditingController controller,
     bool obscure = false,
+    bool enabled = true,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -104,9 +214,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextField(
             controller: controller,
             obscureText: obscure,
+            enabled: enabled && isEditing,
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.grey.withOpacity(0.1),
+              fillColor:
+                  isEditing
+                      ? Colors.grey.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.05),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
@@ -116,7 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderSide: BorderSide.none,
               ),
             ),
-            style: const TextStyle(color: Colors.black87, fontSize: 14),
+            style: TextStyle(
+              color: isEditing ? Colors.black87 : Colors.grey[700],
+              fontSize: 14,
+            ),
             cursorColor: Colors.black87,
           ),
         ],
@@ -126,173 +243,204 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final content = Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.06,
-        vertical: 12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 8),
-          Center(
-            child: Stack(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: CircleAvatar(
-                    radius: screenWidth * 0.14,
-                    backgroundColor: Colors.white,
-                    backgroundImage:
-                        profileImage != null ? FileImage(profileImage!) : null,
-                    child:
-                        profileImage == null
-                            ? Icon(
-                              Icons.person,
-                              size: screenWidth * 0.28,
-                              color: Colors.grey[700],
-                            )
-                            : null,
-                  ),
-                ),
-                Positioned(
-                  bottom: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: showImageSourceActionSheet,
-                    child: Container(
-                      height: 26,
-                      width: 26,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          stops: [0.001, 1.0],
-                          colors: [
-                            Color(0xFF1A9C8C),
-                            Color.fromARGB(255, 2, 51, 164),
-                          ],
-                        ),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        centerTitle: true,
+        actions: [
+          if (isEditing)
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: isUpdating ? null : updateProfile,
             ),
-          ),
-          const SizedBox(height: 16),
-          buildTextField(label: "Full Name", controller: fullNameController),
-          buildTextField(label: "Username", controller: userNameController),
-          buildTextField(label: "Contact", controller: contactController),
-          buildTextField(label: "Email", controller: emailController),
-          buildTextField(
-            label: "Password",
-            controller: passwordController,
-            obscure: true,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: handleChange,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Ink(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        stops: [0.001, 1.0],
-                        colors: [
-                          Color(0xFF1A9C8C),
-                          Color.fromARGB(255, 2, 51, 164),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.06,
+          vertical: 12,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 8),
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 2),
                     ),
-                    child: const SizedBox(
-                      height: 45,
-                      child: Center(
-                        child: Text(
-                          "Change",
-                          style: TextStyle(
+                    child: CircleAvatar(
+                      radius: screenWidth * 0.14,
+                      backgroundColor: Colors.white,
+                      backgroundImage:
+                          profileImage != null
+                              ? FileImage(profileImage!)
+                              : userData?['profileImageUrl'] != null
+                              ? NetworkImage(userData!['profileImageUrl'])
+                                  as ImageProvider
+                              : null,
+                      child:
+                          profileImage == null &&
+                                  userData?['profileImageUrl'] == null
+                              ? Icon(
+                                Icons.person,
+                                size: screenWidth * 0.28,
+                                color: Colors.grey[700],
+                              )
+                              : null,
+                    ),
+                  ),
+                  if (isEditing)
+                    Positioned(
+                      bottom: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: showImageSourceActionSheet,
+                        child: Container(
+                          height: 26,
+                          width: 26,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              stops: [0.001, 1.0],
+                              colors: [
+                                Color(0xFF1A9C8C),
+                                Color.fromARGB(255, 2, 51, 164),
+                              ],
+                            ),
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 14,
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            buildTextField(
+              label: "Full Name",
+              controller: fullNameController,
+              enabled: true,
+            ),
+            buildTextField(label: "Username", controller: userNameController),
+            buildTextField(label: "Contact", controller: contactController),
+            buildTextField(
+              label: "Email",
+              controller: emailController,
+              enabled: false,
+            ),
+            if (isEditing)
+              buildTextField(
+                label: "Password",
+                controller: passwordController,
+                obscure: true,
+              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: isUpdating ? null : updateProfile,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient:
+                            isEditing
+                                ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  stops: [0.001, 1.0],
+                                  colors: [
+                                    Color(0xFF1A9C8C),
+                                    Color.fromARGB(255, 2, 51, 164),
+                                  ],
+                                )
+                                : LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  stops: const [0.001, 1.0],
+                                  colors: [
+                                    Colors.grey[400]!,
+                                    Colors.grey[600]!,
+                                  ],
+                                ),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                      child: SizedBox(
+                        height: 45,
+                        child: Center(
+                          child:
+                              isUpdating
+                                  ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                  : Text(
+                                    isEditing ? "Save Changes" : "Edit Profile",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                if (isEditing)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          fullNameController.text = userData?['fullName'] ?? '';
+                          userNameController.text = userData?['userName'] ?? '';
+                          contactController.text = userData?['contact'] ?? '';
+                          isEditing = false;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                        child: const SizedBox(
+                          height: 45,
+                          child: Center(
+                            child: Text(
+                              "Cancel",
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: InkWell(
-                  onTap: handleSignUp,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Ink(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        stops: [0.001, 1.0],
-                        colors: [
-                          Color(0xFF1A9C8C),
-                          Color.fromARGB(255, 2, 51, 164),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: SizedBox(
-                      height: 45,
-                      child: Center(
-                        child:
-                            isLoading
-                                ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                                : const Text(
-                                  "Log out",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-        ],
-      ),
-    );
-
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return constraints.maxHeight < 700
-                ? SingleChildScrollView(child: content)
-                : content;
-          },
+              ],
+            ),
+          ],
         ),
       ),
     );
