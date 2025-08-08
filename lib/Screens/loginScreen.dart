@@ -6,6 +6,7 @@ import 'package:my_app/Screens/SignUpScreen.dart';
 import 'package:my_app/Screens/forget_password.dart';
 import 'package:my_app/Screens/Bottom_bar_navigation.dart';
 import 'package:my_app/provider/password_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Loginscreen extends StatefulWidget {
   const Loginscreen({super.key});
@@ -32,7 +33,7 @@ class _LoginscreenState extends State<Loginscreen>
     });
   }
 
-  Future<void> login() async {
+  Future<void> loginAndAuthorize() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
@@ -43,24 +44,64 @@ class _LoginscreenState extends State<Loginscreen>
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
-    final url = Uri.parse('$baseUrl/login');
+    final loginUrl = Uri.parse('$baseUrl/login');
 
     try {
-      final response = await http.post(
-        url,
+      final loginResponse = await http.post(
+        loginUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      setState(() {
-        isLoading = false;
-      });
+      if (loginResponse.statusCode != 200) {
+        setState(() => isLoading = false);
+        String errorMessage = 'Login failed';
+        if (loginResponse.body.isNotEmpty) {
+          try {
+            final error = jsonDecode(loginResponse.body);
+            errorMessage = error['message'] ?? errorMessage;
+          } catch (_) {}
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        return;
+      }
 
-      if (response.statusCode == 200) {
+      final loginData = jsonDecode(loginResponse.body);
+      final token = loginData['token'];
+
+      final prefs = await SharedPreferences.getInstance();
+      final storedUserId = prefs.getString('user_id');
+      final userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+      print('Sending to GetUser: userId=$userId, token=$token');
+
+      if (token == null || userId == null) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Missing token or user ID')),
+        );
+        return;
+      }
+
+      await prefs.setString('auth_token', token);
+
+      final userUrl = Uri.parse('$baseUrl/GetUser?userId=$userId');
+      final userResponse = await http.get(
+        userUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      setState(() => isLoading = false);
+
+      if (userResponse.statusCode == 200) {
+        final userData = jsonDecode(userResponse.body);
+        print('Authorized User Data: $userData');
         emailController.clear();
         passwordController.clear();
         Navigator.pushReplacement(
@@ -68,21 +109,14 @@ class _LoginscreenState extends State<Loginscreen>
           MaterialPageRoute(builder: (context) => BottomBarNavigation()),
         );
       } else {
-        String errorMessage = 'Login failed';
-        if (response.body.isNotEmpty) {
-          try {
-            final error = jsonDecode(response.body);
-            errorMessage = error['message'] ?? errorMessage;
-          } catch (_) {}
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fetch user (${userResponse.statusCode})'),
+          ),
+        );
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -206,7 +240,7 @@ class _LoginscreenState extends State<Loginscreen>
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: isLoading ? null : login,
+                            onPressed: isLoading ? null : loginAndAuthorize,
                             style: ElevatedButton.styleFrom(
                               padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(
