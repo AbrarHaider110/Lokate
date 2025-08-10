@@ -72,21 +72,19 @@ class _LoginscreenState extends State<Loginscreen>
 
       final loginData = jsonDecode(loginResponse.body);
       final token = loginData['token'];
-
-      final prefs = await SharedPreferences.getInstance();
-      final storedUserId = prefs.getString('user_id');
-      final userId = storedUserId != null ? int.tryParse(storedUserId) : null;
-      print('Sending to GetUser: userId=$userId, token=$token');
+      final userId = loginData['userId'];
 
       if (token == null || userId == null) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Missing token or user ID')),
+          const SnackBar(content: Text('Missing token or user ID from server')),
         );
         return;
       }
 
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', token);
+      await prefs.setString('user_id', userId.toString());
 
       final userUrl = Uri.parse('$baseUrl/GetUser?userId=$userId');
       final userResponse = await http.get(
