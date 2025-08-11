@@ -34,6 +34,15 @@ class _LoginscreenState extends State<Loginscreen>
   }
 
   Future<void> loginAndAuthorize() async {
+    Map<String, dynamic> parseJwt(String token) {
+      final parts = token.split('.');
+      if (parts.length != 3) throw Exception('Invalid token');
+      final payload = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      return jsonDecode(payload);
+    }
+
     final email = emailController.text.trim();
     final password = passwordController.text;
 
@@ -46,9 +55,8 @@ class _LoginscreenState extends State<Loginscreen>
 
     setState(() => isLoading = true);
 
-    final loginUrl = Uri.parse('$baseUrl/login');
-
     try {
+      final loginUrl = Uri.parse('$baseUrl/login');
       final loginResponse = await http.post(
         loginUrl,
         headers: {'Content-Type': 'application/json'},
@@ -73,20 +81,31 @@ class _LoginscreenState extends State<Loginscreen>
       final loginData = jsonDecode(loginResponse.body);
       final token = loginData['token'];
 
-      final prefs = await SharedPreferences.getInstance();
-      final storedUserId = prefs.getString('user_id');
-      final userId = storedUserId != null ? int.tryParse(storedUserId) : null;
-      print('Sending to GetUser: userId=$userId, token=$token');
-
-      if (token == null || userId == null) {
+      if (token == null) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Missing token or user ID')),
+          const SnackBar(content: Text('Missing token from server')),
         );
         return;
       }
 
+      final payload = parseJwt(token);
+      final userId =
+          payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+
+      if (userId == null) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User ID not found in token')),
+        );
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', token);
+      await prefs.setString('user_id', userId.toString());
+
+      print('Sending to GetUser: userId=$userId, token=$token');
 
       final userUrl = Uri.parse('$baseUrl/GetUser?userId=$userId');
       final userResponse = await http.get(
