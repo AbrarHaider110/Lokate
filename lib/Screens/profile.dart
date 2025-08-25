@@ -74,13 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
-      await prefs.remove('username');
-      await prefs.remove('fullname');
-      await prefs.remove('contact');
-      await prefs.remove('email');
-      await prefs.remove('password');
+      SharedPreferences.getInstance();
 
       Navigator.pushReplacement(
         context,
