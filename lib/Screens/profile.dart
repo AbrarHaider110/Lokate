@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/Screens/Loginscreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,35 +31,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? fullName = prefs.getString('fullname');
-      final String? userName = prefs.getString('username');
-      final String? contact = prefs.getString('contact');
-      final String? email = prefs.getString('email');
-      final String? password = prefs.getString('password');
-
-      setState(() {
-        fullNameController.text = fullName ?? '';
-        userNameController.text = userName ?? '';
-        contactController.text = contact ?? '';
-        emailController.text = email ?? '';
-        passwordController.text = password ?? '';
-        isLoading = false;
-        isDataLoaded = true;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
   @override
   void dispose() {
     fullNameController.dispose();
@@ -68,17 +41,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _loadUserData() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? userId = prefs.getString('user_id');
+      final String? token = prefs.getString('auth_token');
+
+      if (userId == null || token == null) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not authenticated!')),
+        );
+        return;
+      }
+
+      // Call the GetUser API
+      final response = await http.get(
+        Uri.parse('https://lokate.bsite.net/api/user/GetUser?userId=$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        setState(() {
+          fullNameController.text = responseData['fullName'] ?? '';
+          userNameController.text = responseData['userName'] ?? '';
+          contactController.text = responseData['contact'] ?? '';
+          emailController.text = responseData['email'] ?? '';
+          isLoading = false;
+          isDataLoaded = true;
+        });
+
+        await prefs.setString('fullname', fullNameController.text);
+        await prefs.setString('username', userNameController.text);
+        await prefs.setString('contact', contactController.text);
+        await prefs.setString('email', emailController.text);
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load user data: ${response.reasonPhrase}'),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load user data: $e')));
+    }
+  }
+
   void handleLogout() async {
     setState(() {
       isLoading = true;
     });
 
     try {
-      SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
 
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => Loginscreen()),
+        (route) => false,
       );
     } catch (e) {
       setState(() {
@@ -94,26 +134,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('fullname', fullNameController.text);
-      await prefs.setString('username', userNameController.text);
-      await prefs.setString('contact', contactController.text);
-      await prefs.setString('email', emailController.text);
-      await prefs.setString('password', passwordController.text);
+      final String? userId = prefs.getString('user_id');
+      final String? token = prefs.getString('auth_token');
 
-      setState(() {
-        isLoading = false;
-      });
+      if (userId == null || token == null) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not authenticated!')),
+        );
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully!')),
+      final Map<String, dynamic> requestData = {
+        'UserId': userId,
+        'FullName': fullNameController.text.trim(),
+        'UserName': userNameController.text.trim(),
+        'Contact': contactController.text.trim(),
+      };
+
+      final response = await http.post(
+        Uri.parse('https://lokate.bsite.net/api/user/UpdateProfile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestData),
       );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          await prefs.setString('fullname', fullNameController.text);
+          await prefs.setString('username', userNameController.text);
+          await prefs.setString('contact', contactController.text);
+
+          setState(() {
+            isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                responseData['message'] ?? 'Profile updated successfully!',
+              ),
+            ),
+          );
+        } else {
+          setState(() {
+            isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                responseData['message'] ?? 'Failed to update profile!',
+              ),
+            ),
+          );
+        }
+      } else if (response.statusCode == 404) {
+        setState(() {
+          isLoading = false;
+        });
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User not found!')));
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: ${response.reasonPhrase}'),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update profile!')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
     }
   }
 
@@ -295,16 +403,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          buildTextField(label: "Full Name", controller: fullNameController),
-          buildTextField(label: "Username", controller: userNameController),
-          buildTextField(label: "Contact", controller: contactController),
-          buildTextField(label: "Email", controller: emailController),
           buildTextField(
-            label: "Password",
-            controller: passwordController,
-            isPasswordField: true,
+            label: "Full Name",
+            controller: fullNameController,
+            enabled: true,
           ),
-          const SizedBox(height: 10),
+          buildTextField(
+            label: "Username",
+            controller: userNameController,
+            enabled: true,
+          ),
+          buildTextField(
+            label: "Contact",
+            controller: contactController,
+            enabled: true,
+          ),
+          buildTextField(
+            label: "Email",
+            controller: emailController,
+            enabled: false,
+          ),
+          // buildTextField(
+          //   label: "Password",
+          //   controller: passwordController,
+          //   isPasswordField: true,
+          //   enabled: false,
+          // ),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
@@ -328,7 +453,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 45,
                       child: Center(
                         child: Text(
-                          "Save Changes",
+                          "Update Profile",
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
