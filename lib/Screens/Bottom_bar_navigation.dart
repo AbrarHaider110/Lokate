@@ -15,7 +15,7 @@ class _BottomBarNavigationState extends State<BottomBarNavigation> {
     Center(child: Text('Favorites Screen')),
     CreatePostScreen(),
     Center(child: Text('Settings Screen')),
-    ProfileScreen(),
+    ProfileScreen(), // This will now load data from local storage
   ];
 
   final Color selectedColor = Color(0xFF1A9C8C);

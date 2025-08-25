@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:my_app/Screens/Loginscreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +19,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   bool isLoading = false;
+  bool isDataLoaded = false;
+  bool isPasswordVisible = false;
   File? profileImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? fullName = prefs.getString('fullname');
+      final String? userName = prefs.getString('username');
+      final String? contact = prefs.getString('contact');
+      final String? email = prefs.getString('email');
+      final String? password = prefs.getString('password');
+
+      setState(() {
+        fullNameController.text = fullName ?? '';
+        userNameController.text = userName ?? '';
+        contactController.text = contact ?? '';
+        emailController.text = email ?? '';
+        passwordController.text = password ?? '';
+        isLoading = false;
+        isDataLoaded = true;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -29,35 +68,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void handleSignUp() {
+  void handleLogout() async {
     setState(() {
       isLoading = true;
     });
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_id');
+      await prefs.remove('username');
+      await prefs.remove('fullname');
+      await prefs.remove('contact');
+      await prefs.remove('email');
+      await prefs.remove('password');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => Loginscreen()),
+      );
+    } catch (e) {
       setState(() {
         isLoading = false;
       });
-    });
+    }
   }
 
-  void handleChange() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Change button pressed')));
+  void handleSaveChanges() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fullname', fullNameController.text);
+      await prefs.setString('username', userNameController.text);
+      await prefs.setString('contact', contactController.text);
+      await prefs.setString('email', emailController.text);
+      await prefs.setString('password', passwordController.text);
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully!')),
+      );
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update profile!')),
+      );
+    }
   }
 
   Future<void> pickImage(ImageSource source) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(source: source);
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(source: source);
 
-    if (pickedFile != null) {
-      setState(() {
-        profileImage = File(pickedFile.path);
-      });
+      if (pickedFile != null) {
+        setState(() {
+          profileImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+    } finally {
+      Navigator.pop(context);
     }
-
-    Navigator.pop(context);
   }
 
   void showImageSourceActionSheet() {
@@ -87,6 +166,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
     required TextEditingController controller,
     bool obscure = false,
+    bool enabled = true,
+    bool isPasswordField = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -103,7 +184,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 4),
           TextField(
             controller: controller,
-            obscureText: obscure,
+            obscureText: isPasswordField ? !isPasswordVisible : obscure,
+            enabled: enabled,
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.grey.withOpacity(0.1),
@@ -115,8 +197,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
+              suffixIcon:
+                  isPasswordField
+                      ? IconButton(
+                        icon: Icon(
+                          isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordVisible = !isPasswordVisible;
+                          });
+                        },
+                      )
+                      : null,
             ),
-            style: const TextStyle(color: Colors.black87, fontSize: 14),
+            style: TextStyle(
+              color: enabled ? Colors.black87 : Colors.grey,
+              fontSize: 14,
+            ),
             cursorColor: Colors.black87,
           ),
         ],
@@ -127,6 +228,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    if (isLoading) {
+      return const Scaffold(
+        body: SafeArea(child: Center(child: CircularProgressIndicator())),
+      );
+    }
 
     final content = Padding(
       padding: EdgeInsets.symmetric(
@@ -201,14 +308,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           buildTextField(
             label: "Password",
             controller: passwordController,
-            obscure: true,
+            isPasswordField: true,
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: InkWell(
-                  onTap: handleChange,
+                  onTap: handleSaveChanges,
                   borderRadius: BorderRadius.circular(10),
                   child: Ink(
                     decoration: const BoxDecoration(
@@ -227,7 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 45,
                       child: Center(
                         child: Text(
-                          "Change",
+                          "Save Changes",
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -242,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: InkWell(
-                  onTap: handleSignUp,
+                  onTap: handleLogout,
                   borderRadius: BorderRadius.circular(10),
                   child: Ink(
                     decoration: const BoxDecoration(
@@ -287,6 +394,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       body: SafeArea(
+        top: true,
+        bottom: true,
+        left: true,
+        right: true,
+        minimum: const EdgeInsets.all(0),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return constraints.maxHeight < 700

@@ -77,6 +77,11 @@ class _SignupscreenState extends State<Signupscreen>
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', userId);
+        await prefs.setString('username', userName);
+        await prefs.setString('fullname', fullName);
+        await prefs.setString('contact', contact);
+        await prefs.setString('email', email);
+        await prefs.setString('password', password);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
