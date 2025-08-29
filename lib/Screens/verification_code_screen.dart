@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/congrates_screen.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart'; // Added import
 
 class VerifyCodeScreen extends StatefulWidget {
   final int userId;
@@ -178,9 +179,9 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                         alignment: Alignment.center,
                         child:
                             isLoading
-                                ? const CircularProgressIndicator(
+                                ? LoadingAnimationWidget.inkDrop(
                                   color: Colors.white,
-                                  strokeWidth: 2,
+                                  size: 30,
                                 )
                                 : const Text(
                                   'Verify Account',
