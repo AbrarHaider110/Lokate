@@ -4,6 +4,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class OtpVerScreen extends StatefulWidget {
   final int userId;
@@ -188,8 +189,9 @@ class _OtpVerScreenState extends State<OtpVerScreen> {
                         alignment: Alignment.center,
                         child:
                             isLoading
-                                ? const CircularProgressIndicator(
+                                ? LoadingAnimationWidget.inkDrop(
                                   color: Colors.white,
+                                  size: 30,
                                 )
                                 : const Text(
                                   'Verify',

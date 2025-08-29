@@ -7,6 +7,7 @@ import 'package:my_app/Screens/forget_password.dart';
 import 'package:my_app/Screens/Bottom_bar_navigation.dart';
 import 'package:my_app/provider/password_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class Loginscreen extends StatefulWidget {
   const Loginscreen({super.key});
@@ -285,8 +286,9 @@ class _LoginscreenState extends State<Loginscreen>
                                 alignment: Alignment.center,
                                 child:
                                     isLoading
-                                        ? const CircularProgressIndicator(
+                                        ? LoadingAnimationWidget.inkDrop(
                                           color: Colors.white,
+                                          size: 30,
                                         )
                                         : const Text(
                                           "Sign In",

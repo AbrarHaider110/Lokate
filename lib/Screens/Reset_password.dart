@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/loginScreen.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart'; // Added import
 
 class ResetPassword extends StatefulWidget {
   final int userId;
@@ -201,8 +202,9 @@ class _ResetPasswordState extends State<ResetPassword> {
                           alignment: Alignment.center,
                           child:
                               isLoading
-                                  ? const CircularProgressIndicator(
+                                  ? LoadingAnimationWidget.inkDrop(
                                     color: Colors.white,
+                                    size: 30,
                                   )
                                   : const Text(
                                     'Change Password',
