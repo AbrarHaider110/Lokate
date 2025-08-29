@@ -5,6 +5,8 @@ import 'package:my_app/Screens/Loginscreen.dart';
 import 'package:my_app/Screens/verification_code_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:my_app/provider/password_provider.dart';
+import 'package:country_code_picker/country_code_picker.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Signupscreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class _SignupscreenState extends State<Signupscreen>
   bool isLoading = false;
   double _logoOpacity = 0.0;
   static const String baseUrl = 'https://lokate.bsite.net/api/user';
+  String selectedCountryCode = '+92';
+  CountryCode? countryCode;
 
   @override
   void initState() {
@@ -39,13 +43,15 @@ class _SignupscreenState extends State<Signupscreen>
   Future<void> register() async {
     final fullName = fullNameController.text.trim();
     final userName = userNameController.text.trim();
-    final contact = contactController.text.trim();
+    final contact =
+        (countryCode?.dialCode ?? selectedCountryCode) +
+        contactController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
 
     if (fullName.isEmpty ||
         userName.isEmpty ||
-        contact.isEmpty ||
+        contactController.text.isEmpty ||
         email.isEmpty ||
         password.isEmpty) {
       ScaffoldMessenger.of(
@@ -172,7 +178,7 @@ class _SignupscreenState extends State<Signupscreen>
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        "Create a new account by submitting your details for access and authentication.",
+                        "Register by submitting your details for authentication.",
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.black54, fontSize: 14),
                       ),
@@ -187,11 +193,7 @@ class _SignupscreenState extends State<Signupscreen>
                         label: 'Username',
                       ),
                       const SizedBox(height: 12),
-                      _buildInputField(
-                        controller: contactController,
-                        label: 'Contact',
-                        inputType: TextInputType.phone,
-                      ),
+                      _buildContactField(),
                       const SizedBox(height: 12),
                       _buildInputField(
                         controller: emailController,
@@ -255,8 +257,9 @@ class _SignupscreenState extends State<Signupscreen>
                               alignment: Alignment.center,
                               child:
                                   isLoading
-                                      ? const CircularProgressIndicator(
+                                      ? LoadingAnimationWidget.inkDrop(
                                         color: Colors.white,
+                                        size: 30,
                                       )
                                       : const Text(
                                         "Sign Up",
@@ -326,6 +329,59 @@ class _SignupscreenState extends State<Signupscreen>
       ),
       style: const TextStyle(color: Colors.black87),
       cursorColor: Colors.black87,
+    );
+  }
+
+  Widget _buildContactField() {
+    return Row(
+      children: [
+        // Country code picker
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: CountryCodePicker(
+            onChanged: (CountryCode code) {
+              setState(() {
+                countryCode = code;
+              });
+            },
+            initialSelection: 'PK',
+            favorite: ['+92', 'PK'],
+            showCountryOnly: false,
+            showOnlyCountryWhenClosed: false,
+            alignLeft: false,
+            textStyle: const TextStyle(color: Colors.black87),
+            dialogTextStyle: const TextStyle(color: Colors.black87),
+            padding: EdgeInsets.zero,
+            showFlag: true,
+            showFlagDialog: true,
+            hideSearch: false,
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Phone number input field
+        Expanded(
+          child: TextField(
+            controller: contactController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: 'Phone Number',
+              labelStyle: const TextStyle(color: Colors.black54),
+              filled: true,
+              fillColor: Colors.grey.withOpacity(0.1),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            style: const TextStyle(color: Colors.black87),
+            cursorColor: Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 }
