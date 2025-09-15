@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/Screens/Otp_Ver_screen.dart';
-<<<<<<< HEAD
-=======
-import 'package:shared_preferences/shared_preferences.dart';
->>>>>>> 3deee99c7e694f5c8cda867f0c9a7fcec5d5581f
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
@@ -24,17 +20,12 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   @override
   void initState() {
     super.initState();
-<<<<<<< HEAD
-=======
-    _loadUserId();
->>>>>>> 3deee99c7e694f5c8cda867f0c9a7fcec5d5581f
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _logoOpacity = 1.0;
       });
     });
   }
-<<<<<<< HEAD
 Future<void> handleForgetPassword() async {
   final email = _emailController.text.trim();
 
@@ -94,82 +85,6 @@ Future<void> handleForgetPassword() async {
   }
 }
 
-=======
-
-  Future<void> _loadUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = int.tryParse(prefs.getString('user_id') ?? '');
-    });
-  }
-
-  Future<void> handleForgetPassword() async {
-    final email = _emailController.text.trim();
-
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter your email.')));
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedUserId = prefs.getString('user_id');
-
-      if (storedUserId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User not found. Please sign up first.'),
-          ),
-        );
-        return;
-      }
-
-      final userId = int.tryParse(storedUserId);
-      if (userId == null) {
-        throw Exception('Invalid User ID format in local storage');
-      }
-
-      final uri = Uri.parse(
-        'https://lokate.bsite.net/api/user/ForgetPasswordRequest',
-      ).replace(queryParameters: {'email': email});
-
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('OTP sent to your email')));
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => OtpVerScreen(userId: userId)),
-        );
-      } else if (response.statusCode == 404) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('This email is not registered yet.')),
-        );
-      } else {
-        final errorMsg = _extractErrorMessage(response.body);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Request failed: ${e.toString()}')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
->>>>>>> 3deee99c7e694f5c8cda867f0c9a7fcec5d5581f
 
   String _extractErrorMessage(String responseBody) {
     try {
@@ -283,6 +198,7 @@ Future<void> handleForgetPassword() async {
                         ),
                       ),
                     ),
+                    ElevatedButton(onPressed: (){}, child: Text("data"))
                   ],
                 ),
               ),
@@ -293,8 +209,3 @@ Future<void> handleForgetPassword() async {
     );
   }
 }
-<<<<<<< HEAD
-
-// asdasdasdasdasdasd
-=======
->>>>>>> 3deee99c7e694f5c8cda867f0c9a7fcec5d5581f
