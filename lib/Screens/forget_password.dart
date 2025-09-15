@@ -198,7 +198,6 @@ Future<void> handleForgetPassword() async {
                         ),
                       ),
                     ),
-                    ElevatedButton(onPressed: (){}, child: Text("data"))
                   ],
                 ),
               ),
