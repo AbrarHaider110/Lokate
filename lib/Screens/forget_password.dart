@@ -50,7 +50,6 @@ Future<void> handleForgetPassword() async {
 
     if (response.statusCode == 200) {
         print('Response Body: ${response.body}'); 
-                print('Response Body: ${response.body}'); 
 
 
       final data = json.decode(response.body);
