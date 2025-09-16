@@ -49,18 +49,23 @@ Future<void> handleForgetPassword() async {
     );
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final userId = data['userId'];
+        print('Response Body: ${response.body}'); // <-- ADD THIS LINE
 
-      if (userId == null) {
-        throw Exception('User ID missing in response.');
+      final data = json.decode(response.body);
+
+      final dynamic userIdRaw = data['userId'];
+      if (userIdRaw == null) {
+        throw Exception('User ID missing in API response.');
       }
+
+      final int userId = int.tryParse(userIdRaw.toString()) ??
+          (throw Exception('Invalid user ID format from API.'));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('OTP sent to your email')),
       );
 
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => OtpVerScreen(userId: userId),
@@ -85,21 +90,21 @@ Future<void> handleForgetPassword() async {
   }
 }
 
-
-  String _extractErrorMessage(String responseBody) {
-    try {
-      final body = json.decode(responseBody);
-      if (body.containsKey('errors')) {
-        final errors = body['errors'] as Map<String, dynamic>;
-        return errors.entries
-            .map((entry) => '${entry.key}: ${(entry.value as List).join(", ")}')
-            .join('\n');
-      }
-      return body['title'] ?? 'An unknown error occurred.';
-    } catch (_) {
-      return 'An unknown error occurred.';
+String _extractErrorMessage(String responseBody) {
+  try {
+    final body = json.decode(responseBody);
+    if (body.containsKey('errors')) {
+      final errors = body['errors'] as Map<String, dynamic>;
+      return errors.entries
+          .map((entry) => '${entry.key}: ${(entry.value as List).join(", ")}')
+          .join('\n');
     }
+    return body['title'] ?? 'An unknown error occurred.';
+  } catch (_) {
+    return 'An unknown error occurred.';
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
